@@ -38,7 +38,7 @@ def config_builder():
         if confirm.lower() in ["yes","y"]:
             with open(f"temp/{config.db_type}.{config.database_name}.config","w") as file:
                 file.write(config.model_dump_json())
-            return "Configuration saved successfully."
+            return f"temp/{config.db_type}.{config.database_name}.config"
         elif confirm.lower() in ["q","Q"]:
             print("Exiting config builder.")
             return "Exited config builder without saving."

@@ -7,7 +7,8 @@ from langchain_core.prompts import ChatPromptTemplate
 import os
 import dotenv
 
-from configbuilder import config_builder
+from tools.configbuilder import config_builder
+from tools.configreader import ConfigReader
 
 dotenv.load_dotenv()
 
@@ -33,7 +34,7 @@ llm=init_chat_model(
     model_provider="openai",
     base_url="https://openrouter.ai/api/v1"
 )
-tools=[config_builder]
+tools=[config_builder, ConfigReader]
 llm_with_tools=llm.bind_tools(tools)
 chatAgent=system_prompt | llm_with_tools
 
