@@ -1,5 +1,6 @@
 # LLMDB
 
+A <b>Natural Language Layer</b> for querying any Database and building Infrastructure
 LLMDB is a prototype tool designed to create database configurations, use Docker to set up database infrastructure, and execute database queries through a natural language interface.
 
 ## Features
