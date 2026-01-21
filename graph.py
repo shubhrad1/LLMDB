@@ -4,18 +4,21 @@ from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph, START, END
 from langchain.chat_models import init_chat_model
 from langchain_core.prompts import ChatPromptTemplate
+from pydantic import BaseModel
 import os
 import dotenv
 
-from tools.configbuilder import config_builder
+from tools.configbuilder import config_builder,DatabaseConfig
 from tools.configreader import ConfigReader
+from db_tool import create_postgres_container
 
 dotenv.load_dotenv()
+
 
 system_prompt=ChatPromptTemplate.from_messages(
     [
         ("system",
-         """
+        """
             You are a helpuful chatbot and will assist the users in problems and queries relating to database.
             It can be queries writing,understanding or concept explanation.
             You may also be asked to run a tool for database config creation.
@@ -34,7 +37,7 @@ llm=init_chat_model(
     model_provider="openai",
     base_url="https://openrouter.ai/api/v1"
 )
-tools=[config_builder, ConfigReader]
+tools=[config_builder, ConfigReader, create_postgres_container]
 llm_with_tools=llm.bind_tools(tools)
 chatAgent=system_prompt | llm_with_tools
 
@@ -44,6 +47,7 @@ class State(TypedDict):
     # user_input: Optional[str]
     tools: Optional[list]
     end: bool
+    db_config: Optional[DatabaseConfig]
 
 def chatbot(state: State):
     messages=state["messages"]
@@ -66,12 +70,31 @@ def tool_runner(state: State):
             tool_name=tool_call["name"]
             for tool in tools:
                 if tool.name==tool_name:
-                    tool_response=tool.invoke(tool_call["args"])
+                    # Special handling for create_postgres_container
+                    if tool_name == "create_postgres_container" and "db_config" in state and state["db_config"] is not None:
+                        config = state["db_config"]
+                        args = {
+                            "name": f"{config.db_type}_{config.database_name}",
+                            "username": config.username,
+                            "password": config.password,
+                            "db_name": config.database_name,
+                            "host_port": config.port
+                        }
+                        tool_response = tool.invoke(args)
+                    else:
+                        tool_response=tool.invoke(tool_call["args"])
                     messages.append(ToolMessage(
                         content=tool_response,
                         name=tool_name,
                         tool_call_id=tool_call["id"]
                     ))
+                    # If ConfigReader, parse and store the config
+                    if tool_name == "ConfigReader":
+                        try:
+                            state["db_config"] = DatabaseConfig.model_validate_json(tool_response)
+                        except Exception as e:
+                            print(f"Failed to parse config: {e}")
+                            state["db_config"] = None
     return state
 
 def get_input(state: State):
@@ -113,5 +136,5 @@ graph = workflow_graph()
 
 # Run the workflow
 def run_workflow():
-    state = State(messages=[], tools=tools, end=False)
+    state = State(messages=[], tools=tools, end=False, db_config=None)
     graph.invoke(state)

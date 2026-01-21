@@ -16,6 +16,3 @@ def ConfigReader(path:str)->str:
             return content
     except FileNotFoundError:
         return "Config file not found. Please create a config first."
-
-
-    

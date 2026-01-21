@@ -1,7 +1,9 @@
 import subprocess
 import time
+from langchain.tools import tool
 
-def create_postgres_container(args=None, kwargs=None):
+@tool
+def create_postgres_container(name, username, password, db_name, host_port)->str:
     """
     Create and run a PostgreSQL Docker container.
     Args:
@@ -10,16 +12,20 @@ def create_postgres_container(args=None, kwargs=None):
     Returns:
         None
     """
-    print("Creating PostgreSQL container...")
-    subprocess.run([
-        "docker", "run", "-d",
-        "--name", "my_postgres",
-        "-e", "POSTGRES_USER=admin",
-        "-e", "POSTGRES_PASSWORD=secret",
-        "-e", "POSTGRES_DB=mydb",
-        "-p", "5433:5432",
-        "postgres:latest"
-    ], check=True)
+    try:
+        print("Creating PostgreSQL container...")
+        subprocess.run([
+            "docker", "run", "-d",
+            "--name", name,
+            "-e", f"POSTGRES_USER={username}",
+            "-e", f"POSTGRES_PASSWORD={password}",
+            "-e", f"POSTGRES_DB={db_name}",
+            "-p", f"{host_port}:5432",
+            "postgres:latest"
+        ], check=True)
+        return "PostgreSQL container created successfully."
+    except subprocess.CalledProcessError as e:
+        return f"Failed to create PostgreSQL container: {e}"
 
 def attach_shell():
     """
@@ -54,8 +60,8 @@ def destroy_postgres_image():
     print("Destroying PostgreSQL image...")
     subprocess.run(["docker", "rmi", "-f", "postgres:latest"], check=True)
 
-if __name__ == "__main__":
-    create_postgres_container()
-    attach_shell()
-    destroy_postgres_container()
-    # destroy_postgres_image()
+# if __name__ == "__main__":
+#     create_postgres_container()
+#     attach_shell()
+#     destroy_postgres_container()
+#     # destroy_postgres_image()
